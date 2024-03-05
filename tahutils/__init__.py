@@ -1,3 +1,3 @@
 from . import tahu
-from tahelper.spb import SpbModel, COMMAND_METRICS
-from tahelper.tahu.sparkplug_b import MetricDataType 
+from tahutils.spb import SpbModel, COMMAND_METRICS
+from tahutils.tahu.sparkplug_b import MetricDataType 

@@ -1,4 +1,4 @@
-from tahelper.tahu import sparkplug_b as spb
+from tahutils.tahu import sparkplug_b as spb
 from typing import Any, Union
 
 COMMAND_METRICS = ["Node Control/Next Server", "Node Control/Rebirth", "Node Control/Reboot"]
