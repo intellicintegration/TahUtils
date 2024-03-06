@@ -5,7 +5,12 @@ from enum import Enum
 
 COMMAND_METRICS = ["Node Control/Next Server", "Node Control/Rebirth", "Node Control/Reboot"]
 
-def process_times(times: dict[str, int | datetime]) -> dict[str, int]:
+MetricName = Union[str, Enum]
+MetricValues = dict[MetricName, Any]
+Time = Union[int, datetime]
+MetricTimes = dict[MetricName, Time]
+
+def process_times(times: MetricTimes) -> dict[str, int]:
 	"""Processes the times dictionary to convert to milliseconds"""
 	r = {
 		metric: int(time.timestamp() * 1000) if isinstance(time, datetime) else time
@@ -13,8 +18,22 @@ def process_times(times: dict[str, int | datetime]) -> dict[str, int]:
 	}
 	return r
 
+def convert_enum_keys(d: dict[MetricName, Any]) -> dict[str, Any]:
+	"""Processes the times dictionary to convert to milliseconds"""
+	r = {
+		k if isinstance(k, str) else k.value: v
+		for k, v in d.items()
+	}
+	return r
+
 class SpbModel:
-	def __init__(self, metrics: dict[str, spb.MetricDataType], use_aliases: bool=False, auto_serialize: bool=True) -> None:
+	def __init__(
+			self, 
+			metrics: dict[MetricName, spb.MetricDataType], 
+			use_aliases: bool=False, 
+			auto_serialize: bool=True
+		) -> None:
+		metrics = convert_enum_keys(metrics)
 		self.metrics = list(metrics.keys())
 		self.metric_types = {k:v for k,v in metrics.items()}
 
@@ -61,8 +80,11 @@ class SpbModel:
 		self.node_death_requested = True
 		return self._serialize(spb.getNodeDeathPayload())
 
-	def getNodeBirthPayload(self, state: dict[str, Any], times: dict[str, int | datetime] = dict()):
+	def getNodeBirthPayload(self, state: MetricValues, times: MetricTimes = dict()):
 		"""Returns a birth payload for the given state. State must be set for all metrics."""
+		state = convert_enum_keys(state)
+		times = convert_enum_keys(times)
+		
 		if not self.node_death_requested:
 			raise ValueError("Must request death before requesting new birth")
 		if set(state.keys()) != set(self.metrics):
@@ -87,8 +109,11 @@ class SpbModel:
 
 		return self._serialize(payload)
 	
-	def getDataPayload(self, state: dict[str, Any], times: dict[str, int | datetime] = dict()):
+	def getDataPayload(self, state: MetricValues, times: MetricTimes = dict()):
 		"""Returns a data payload for the given state"""
+		state = convert_enum_keys(state)
+		times = convert_enum_keys(times)
+		
 		if not set(state.keys()).issubset(set(self.metrics)):
 			raise ValueError("Node data metrics must be a subset of the model's metrics")
 		
@@ -96,10 +121,8 @@ class SpbModel:
 
 		payload = spb.getDdataPayload()
 
-		absent_flag = object()
-		
 		for metric, value in state.items():
-			if value != self.last_published.get(metric, absent_flag):
+			if value != self.last_published.get(metric, ...):
 				mt = self.metric_types[metric]
 				self.last_published[metric] = value
 			
