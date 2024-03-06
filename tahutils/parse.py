@@ -13,6 +13,24 @@ class ParsedMetric:
     def is_null(self):
         return self.value is None
 
+def payload_from_string(s):
+    p = spb.Payload()
+    p.ParseFromString(s)
+    return p
+
+def parse_payload(payload: spb.Payload) -> list[ParsedMetric]:
+    """Parses the payload to a list of ParsedMetric"""
+    parsed = [
+        ParsedMetric(
+            name=metric.name,
+            value=parse_metric_value(metric),
+            timestamp=metric.timestamp,
+            datatype=metric.datatype
+        )
+        for metric in payload.metrics
+    ]
+    return parsed
+
 def parse_dataset_value(m, dtype: int):
     dsdt = spb.DataSetDataType
 

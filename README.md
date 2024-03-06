@@ -2,6 +2,10 @@
 
 A small wrapper package for using [Tahu for Sparkplug B](https://github.com/eclipse/tahu) in Python. Comes with an unmodified (barring import structure) Tahu included, hence the use of the Eclipse license.
 
+## Examples
+
+See the `examples` directory in the project repository.
+
 ## Current Support
 
 - Generating Sparkplug B topics

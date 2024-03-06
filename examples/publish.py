@@ -27,14 +27,13 @@ def main():
 		model.getNodeDeathPayload(),
 	)
 	mqttc.connect("localhost", 1883)
-	birth = model.getNodeBirthPayload(
-		{
+	data = {
 			Metric.message: "Hello, world!",
 			Metric.steps: 0,
 			Metric.percent: 0,
 		}
-	)
-	print(birth)
+	print(f"publish birth with data {data}")
+	birth = model.getNodeBirthPayload(data)
 	mqttc.publish(
 		topic.nbirth, 
 		bytes(birth)
@@ -49,6 +48,8 @@ def main():
 		}
 		if i == n_steps:
 			data[Metric.message] = "Goodbye, world!"
+		
+		print(f"publish {i} with data {data}")
 
 		mqttc.publish(
 			topic.ndata, 
