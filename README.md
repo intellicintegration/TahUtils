@@ -1,8 +1,17 @@
 # TahUtils
 
-A small wrapper package for using [Tahu for Sparkplug B](https://github.com/eclipse/tahu) in Python. Comes with an unmodified (barring import structure) Tahu included.
+A small wrapper package for using [Tahu for Sparkplug B](https://github.com/eclipse/tahu) in Python. Comes with an unmodified (barring import structure) Tahu included, hence the use of the Eclipse license.
 
-*Note:* Full support for devices (as opposed to nodes) is not yet verified.
+## Current Support
+
+- Generating Sparkplug B topics
+- Generating birth, death, and data payloads for nodes (not tested for devices)
+- Managing aliases
+- Using enums for metric names
+
+## Goals
+
+- Parse message handling
 
 ## Updating Tahu Version
 
