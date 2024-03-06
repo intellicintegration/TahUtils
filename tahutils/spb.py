@@ -4,7 +4,11 @@ from datetime import datetime
 from enum import Enum
 from dataclasses import dataclass
 
-COMMAND_METRICS = ["Node Control/Next Server", "Node Control/Rebirth", "Node Control/Reboot"]
+COMMAND_METRICS = {
+	"Node Control/Next Server", 
+	"Node Control/Rebirth", 
+	"Node Control/Reboot"
+}
 
 MetricName = Union[str, Enum]
 MetricValues = dict[MetricName, Any]
@@ -35,19 +39,19 @@ class SpbModel:
 			auto_serialize: bool=True
 		) -> None:
 		metrics = convert_enum_keys(metrics)
-		self.metrics = list(metrics.keys())
+		self.metrics = set(metrics.keys())
 		self.metric_types = {k:v for k,v in metrics.items()}
 
 		self.last_published = {}
 
 		self._use_aliases = use_aliases
-		all_metrics = COMMAND_METRICS + self.metrics
-		self.alias = {metric: i for i, metric in enumerate(all_metrics)} \
+		self.all_metrics = COMMAND_METRICS | self.metrics
+		self.alias = {metric: i for i, metric in enumerate(self.all_metrics)} \
 			if self._use_aliases else \
-			{metric: None for metric in all_metrics}
+			{metric: None for metric in self.all_metrics}
 		
-		if self._use_aliases:
-			self._alias_to_metric = {i: metric for i, metric in self.alias.items()}
+		self._alias_to_metric = {i: metric for i, metric in self.alias.items()} \
+			if self._use_aliases else None
 
 		self.auto_serialize = auto_serialize
 
@@ -70,10 +74,10 @@ class SpbModel:
 			raise ValueError("Aliases are not being used")
 		return self.alias[metric]
 	
-	def _serialize(self, p: spb.Payload) -> Union[bytearray, spb.Payload]:
+	def _serialize(self, p: spb.Payload) -> Union[bytes, spb.Payload]:
 		"""Serializes the payload if auto_serialize is True, otherwise is a no-op."""
 		if self.auto_serialize:
-			return bytearray(p.SerializeToString())
+			return bytes(p.SerializeToString())
 		return p
 	
 	def getNodeDeathPayload(self):
@@ -88,7 +92,8 @@ class SpbModel:
 		
 		if not self.node_death_requested:
 			raise ValueError("Must request death before requesting new birth")
-		if set(state.keys()) != set(self.metrics):
+		if set(COMMAND_METRICS | state.keys()) != set(self.all_metrics):
+			print(state.keys(), self.all_metrics)
 			raise ValueError("Node birth metrics must be the same as the model's metrics")
 
 		times = process_times(times)
@@ -115,7 +120,7 @@ class SpbModel:
 		state = convert_enum_keys(state)
 		times = convert_enum_keys(times)
 		
-		if not set(state.keys()).issubset(set(self.metrics)):
+		if not set(state.keys()).issubset(set(self.all_metrics)):
 			raise ValueError("Node data metrics must be a subset of the model's metrics")
 		
 		times = process_times(times)
@@ -149,30 +154,39 @@ class SpbTopic:
 			return f"{self.namespace}/{self.group_id}/{mtype}/{self.edge_node_id}/{self.device_id}"
 		return f"{self.namespace}/{self.group_id}/{mtype}/{self.edge_node_id}"
 
+	@property
 	def nbirth(self):
 		return self.construct("nbirth")
 	
+	@property
 	def ndeath(self):
 		return self.construct("ndeath")
 	
+	@property
 	def dbirth(self):
 		return self.construct("dbirth")
 	
+	@property
 	def ddeath(self):
 		return self.construct("ddeath")
 	
+	@property
 	def ndata(self):
 		return self.construct("ndata")
 	
+	@property
 	def ddata(self):
 		return self.construct("ddata")
 	
+	@property
 	def ncmd(self):
 		return self.construct("ncmd")
 	
+	@property
 	def dcmd(self):
 		return self.construct("dcmd")
 	
+	@property
 	def state(self):
 		return self.construct("state")
 	
