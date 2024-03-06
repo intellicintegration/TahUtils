@@ -1,7 +1,17 @@
 from tahutils.tahu import sparkplug_b as spb
 from typing import Any, Union
+from datetime import datetime
+from enum import Enum
 
 COMMAND_METRICS = ["Node Control/Next Server", "Node Control/Rebirth", "Node Control/Reboot"]
+
+def process_times(times: dict[str, int | datetime]) -> dict[str, int]:
+	"""Processes the times dictionary to convert to milliseconds"""
+	r = {
+		metric: int(time.timestamp() * 1000) if isinstance(time, datetime) else time
+		for metric, time in times.items()
+	}
+	return r
 
 class SpbModel:
 	def __init__(self, metrics: dict[str, spb.MetricDataType], use_aliases: bool=False, auto_serialize: bool=True) -> None:
@@ -25,22 +35,40 @@ class SpbModel:
 
 	@property
 	def aliasing(self) -> bool:
+		"""Returns whether aliases are being used"""
 		return self._use_aliases
+
+	def aliasToMetric(self, alias: int) -> str:
+		"""Returns the metric for the given alias. Raises a ValueError if aliases are not being used."""
+		if not self._use_aliases:
+			raise ValueError("Aliases are not being used")
+		return self._alias_to_metric[alias]
+	
+	def metricToAlias(self, metric: str) -> int:
+		"""Returns the alias for the given metric. Raises a ValueError if aliases are not being used."""
+		if not self._use_aliases:
+			raise ValueError("Aliases are not being used")
+		return self.alias[metric]
 	
 	def _serialize(self, p: spb.Payload) -> Union[bytearray, spb.Payload]:
+		"""Serializes the payload if auto_serialize is True, otherwise is a no-op."""
 		if self.auto_serialize:
 			return bytearray(p.SerializeToString())
 		return p
 	
 	def getNodeDeathPayload(self):
+		"""Returns a death payload for the node. This must be requested and sent as part of the connection."""
 		self.node_death_requested = True
 		return self._serialize(spb.getNodeDeathPayload())
 
-	def getNodeBirthPayload(self, state: dict[str, Any], times = dict()):
+	def getNodeBirthPayload(self, state: dict[str, Any], times: dict[str, int | datetime] = dict()):
+		"""Returns a birth payload for the given state. State must be set for all metrics."""
 		if not self.node_death_requested:
 			raise ValueError("Must request death before requesting new birth")
 		if set(state.keys()) != set(self.metrics):
 			raise ValueError("Node birth metrics must be the same as the model's metrics")
+
+		times = process_times(times)
 
 		payload = spb.getNodeBirthPayload()
 
@@ -59,19 +87,24 @@ class SpbModel:
 
 		return self._serialize(payload)
 	
-	def getDataPayload(self, state: dict[str, Any], times = dict()):
+	def getDataPayload(self, state: dict[str, Any], times: dict[str, int | datetime] = dict()):
+		"""Returns a data payload for the given state"""
 		if not set(state.keys()).issubset(set(self.metrics)):
 			raise ValueError("Node data metrics must be a subset of the model's metrics")
 		
+		times = process_times(times)
+
 		payload = spb.getDdataPayload()
+
+		absent_flag = object()
 		
 		for metric, value in state.items():
-			if value != self.last_published.get(metric, ...):
+			if value != self.last_published.get(metric, absent_flag):
 				mt = self.metric_types[metric]
 				self.last_published[metric] = value
 			
 				if metric in times:
-					spb.addMetric(payload, metric, self.alias[metric], mt, value, metric[times])
+					spb.addMetric(payload, metric, self.alias[metric], mt, value, times[metric])
 				else:
 					spb.addMetric(payload, metric, self.alias[metric], mt, value)
 

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from tahu import sparkplug_b as spb
+from tahutils.tahu import sparkplug_b as spb
 from typing import Any
 
 @dataclass

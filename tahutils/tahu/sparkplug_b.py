@@ -10,10 +10,10 @@
 # * Contributors:
 # *   Cirrus Link Solutions - initial implementation
 # ********************************************************************************/
-import tahu.sparkplug_b_pb2 as sparkplug_b_pb2
+import tahutils.tahu.sparkplug_b_pb2 as sparkplug_b_pb2
 import time
-from tahu.sparkplug_b_pb2 import Payload
-from tahu.array_packer import *
+from tahutils.tahu.sparkplug_b_pb2 import Payload
+from tahutils.tahu.array_packer import *
 
 seqNum = 0
 bdSeq = 0
