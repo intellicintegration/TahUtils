@@ -2,6 +2,7 @@ from tahutils.tahu import sparkplug_b as spb
 from typing import Any, Union
 from datetime import datetime
 from enum import Enum
+from dataclasses import dataclass
 
 COMMAND_METRICS = ["Node Control/Next Server", "Node Control/Rebirth", "Node Control/Reboot"]
 
@@ -132,3 +133,47 @@ class SpbModel:
 					spb.addMetric(payload, metric, self.alias[metric], mt, value)
 
 		return self._serialize(payload)
+
+@dataclass
+class SpbTopic:
+	group_id: str
+	edge_node_id: str
+
+	device_id: str | None = None
+
+	namespace: str = "spBv1.0"
+
+	def construct(self, mtype: str):
+		mtype = mtype.upper()
+		if self.device_id:
+			return f"{self.namespace}/{self.group_id}/{mtype}/{self.edge_node_id}/{self.device_id}"
+		return f"{self.namespace}/{self.group_id}/{mtype}/{self.edge_node_id}"
+
+	def nbirth(self):
+		return self.construct("nbirth")
+	
+	def ndeath(self):
+		return self.construct("ndeath")
+	
+	def dbirth(self):
+		return self.construct("dbirth")
+	
+	def ddeath(self):
+		return self.construct("ddeath")
+	
+	def ndata(self):
+		return self.construct("ndata")
+	
+	def ddata(self):
+		return self.construct("ddata")
+	
+	def ncmd(self):
+		return self.construct("ncmd")
+	
+	def dcmd(self):
+		return self.construct("dcmd")
+	
+	def state(self):
+		return self.construct("state")
+	
+	

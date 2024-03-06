@@ -2,6 +2,8 @@
 
 A small wrapper package for using [Tahu for Sparkplug B](https://github.com/eclipse/tahu) in Python. Comes with an unmodified (barring import structure) Tahu included.
 
+*Note:* Full support for devices (as opposed to nodes) is not yet verified.
+
 ## Updating Tahu Version
 
 Assuming no major refactoring to the tahu library, updating the included tahu consists of the following steps:
