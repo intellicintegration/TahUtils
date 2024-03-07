@@ -36,7 +36,8 @@ class SpbModel:
 			self, 
 			metrics: dict[MetricName, spb.MetricDataType], 
 			use_aliases: bool=False, 
-			auto_serialize: bool=True
+			auto_serialize: bool=True,
+			serialize_cast: callable | None = bytearray
 		) -> None:
 		metrics = convert_enum_keys(metrics)
 		self.metrics = set(metrics.keys())
@@ -54,6 +55,7 @@ class SpbModel:
 			if self._use_aliases else None
 
 		self.auto_serialize = auto_serialize
+		self.serialize_cast = serialize_cast
 
 		self.node_death_requested = False
 
@@ -77,7 +79,9 @@ class SpbModel:
 	def _serialize(self, p: spb.Payload) -> Union[bytes, spb.Payload]:
 		"""Serializes the payload if auto_serialize is True, otherwise is a no-op."""
 		if self.auto_serialize:
-			return bytes(p.SerializeToString())
+			if self.serialize_cast is not None:
+				return self.serialize_cast(p.SerializeToString())
+			return p.SerializeToString()
 		return p
 	
 	def getNodeDeathPayload(self):
