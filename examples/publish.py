@@ -28,10 +28,10 @@ def main():
 	)
 	mqttc.connect("localhost", 1883)
 	data = {
-			Metric.message: "Hello, world!",
-			Metric.steps: 0,
-			Metric.percent: 0,
-		}
+		Metric.message: "Hello, world!",
+		Metric.steps: 0,
+		Metric.percent: 0,
+	}
 	print(f"publish birth with data {data}")
 	birth = model.getNodeBirthPayload(data)
 	mqttc.publish(
