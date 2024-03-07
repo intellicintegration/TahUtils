@@ -13,6 +13,7 @@ classifiers = [
 [tool.poetry.dependencies]
 python = "^3.10"
 protobuf = "^4.25.3"
+paho-mqtt = "^2.0.0"
 
 
 [tool.poetry.group.dev.dependencies]
