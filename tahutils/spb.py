@@ -3,6 +3,7 @@ from typing import Any, Union, Optional
 from datetime import datetime
 from enum import Enum
 from dataclasses import dataclass
+from functools import cached_property
 
 COMMAND_METRICS = {
 	"Node Control/Next Server", 
@@ -154,46 +155,50 @@ class SpbTopic:
 
 	namespace: str = "spBv1.0"
 
+	@cached_property
+	def template_string(self):
+		return f"{self.namespace}/{self.group_id}/%s/{self.edge_node_id}/{self.device_id}" \
+			if self.device_id else \
+			f"{self.namespace}/{self.group_id}/%s/{self.edge_node_id}"
+
 	def construct(self, mtype: str):
 		"""Constructs a Sparkplug B topic for the given message type. If a device_id is set, it will be included in the topic."""
 		mtype = mtype.upper()
-		if self.device_id:
-			return f"{self.namespace}/{self.group_id}/{mtype}/{self.edge_node_id}/{self.device_id}"
-		return f"{self.namespace}/{self.group_id}/{mtype}/{self.edge_node_id}"
+		return self.template_string % mtype
 
-	@property
+	@cached_property
 	def nbirth(self):
 		return self.construct("NBIRTH")
 	
-	@property
+	@cached_property
 	def ndeath(self):
 		return self.construct("NDEATH")
 	
-	@property
+	@cached_property
 	def dbirth(self):
 		return self.construct("DBIRTH")
 	
-	@property
+	@cached_property
 	def ddeath(self):
 		return self.construct("DDEATH")
 	
-	@property
+	@cached_property
 	def ndata(self):
 		return self.construct("NDATA")
 	
-	@property
+	@cached_property
 	def ddata(self):
 		return self.construct("DDATA")
 	
-	@property
+	@cached_property
 	def ncmd(self):
 		return self.construct("NCMD")
 	
-	@property
+	@cached_property
 	def dcmd(self):
 		return self.construct("DCMD")
 	
-	@property
+	@cached_property
 	def state(self):
 		return self.construct("STATE")
 	
