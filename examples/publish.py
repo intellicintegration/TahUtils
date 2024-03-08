@@ -5,27 +5,46 @@ import paho.mqtt.client as mqtt
 
 from tahutils import SpbModel, SpbTopic, MetricDataType
 
+"""
+Enums can be used to define the metric names. This is useful for ensuring that the metric names are consistent across the application.
+"""
 class Metric(Enum):
 	message = "message"
 	steps = "steps"
 	percent = "percent"
 
 def main():
+	"""
+	Publishes a birth message, then a series of data messages, and finally a death message.
+	Assumes a local MQTT broker is running on the default port with no authentication.
+	"""
+
+
+	"""
+	When constructing the SpbModel, every metric must be defined with its corresponding MetricDataType.
+	Additionally, we set the serialize_cast to the datatype expected by the MQTT client's publish method.
+	"""
 	model = SpbModel(
 		{
 			Metric.message: MetricDataType.String,
 			Metric.steps: MetricDataType.Int32,
 			Metric.percent: MetricDataType.Float,
-		}
+		},
+		serialize_cast=bytes
 	)
 	topic = SpbTopic("testgroup", "testnode")
 
-	
-	mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, "spb_tester")
+	mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, "TahutilsPublishExample")
+
+	"""
+	We must get the death payload before connecting to the broker. This is because the will payload is sent as part of the connection process.
+	Additionally, the death payload must be generated before a birth payload is requested. 
+	"""
 	mqttc.will_set(
 		topic.ndeath,
 		model.getNodeDeathPayload(),
 	)
+	
 	mqttc.connect("localhost", 1883)
 	data = {
 		Metric.message: "Hello, world!",
@@ -36,12 +55,15 @@ def main():
 	birth = model.getNodeBirthPayload(data)
 	mqttc.publish(
 		topic.nbirth, 
-		bytes(birth)
+		birth
 	)
 
 	n_steps = 5
 	for i in range(1, n_steps+1):
 		time.sleep(2)
+		"""
+		Data for NDATA/DDATA doesn't have to be a complete set of metrics.
+		"""
 		data = {
 			Metric.steps: i,
 			Metric.percent: i / n_steps,
