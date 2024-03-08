@@ -1,5 +1,5 @@
 from tahutils.tahu import sparkplug_b as spb
-from typing import Any, Union
+from typing import Any, Union, Optional
 from datetime import datetime
 from enum import Enum
 from dataclasses import dataclass
@@ -23,8 +23,8 @@ def process_times(times: MetricTimes) -> dict[str, int]:
 	}
 	return r
 
-def convert_enum_keys(d: dict[MetricName, Any]) -> dict[str, Any]:
-	"""Processes the times dictionary to convert to milliseconds"""
+def convert_enum_keys(d: dict[MetricName, Time]) -> dict[str, Any]:
+	"""Converts the keys of the dictionary to strings if they are enums, otherwise leaves them as is. This is used to convert enum keys to strings for use in the SpbBodel."""
 	r = {
 		k if isinstance(k, str) else k.value: v
 		for k, v in d.items()
@@ -37,7 +37,7 @@ class SpbModel:
 			metrics: dict[MetricName, spb.MetricDataType], 
 			use_aliases: bool=False, 
 			auto_serialize: bool=True,
-			serialize_cast: callable | None = bytearray
+			serialize_cast: Optional[callable] = bytearray
 		) -> None:
 		metrics = convert_enum_keys(metrics)
 		self.metrics = set(metrics.keys())
@@ -72,6 +72,8 @@ class SpbModel:
 	
 	def metricToAlias(self, metric: str) -> int:
 		"""Returns the alias for the given metric. Raises a ValueError if aliases are not being used."""
+		if isinstance(metric, Enum):
+			metric = metric.value
 		if not self._use_aliases:
 			raise ValueError("Aliases are not being used")
 		return self.alias[metric]
@@ -90,7 +92,7 @@ class SpbModel:
 		return self._serialize(spb.getNodeDeathPayload())
 
 	def getNodeBirthPayload(self, state: MetricValues, times: MetricTimes = dict()):
-		"""Returns a birth payload for the given state. State must be set for all metrics."""
+		"""Returns a birth payload for the given state. State must be set for all metrics. Times can be set for specific metrics, if desired."""
 		state = convert_enum_keys(state)
 		times = convert_enum_keys(times)
 		
@@ -120,7 +122,7 @@ class SpbModel:
 		return self._serialize(payload)
 	
 	def getDataPayload(self, state: MetricValues, times: MetricTimes = dict()):
-		"""Returns a data payload for the given state"""
+		"""Returns a data payload for the given state. Times can be set for specific metrics, if desired."""
 		state = convert_enum_keys(state)
 		times = convert_enum_keys(times)
 		
@@ -143,7 +145,7 @@ class SpbModel:
 
 		return self._serialize(payload)
 
-@dataclass
+@dataclass(frozen=True)
 class SpbTopic:
 	group_id: str
 	edge_node_id: str
@@ -153,6 +155,7 @@ class SpbTopic:
 	namespace: str = "spBv1.0"
 
 	def construct(self, mtype: str):
+		"""Constructs a Sparkplug B topic for the given message type. If a device_id is set, it will be included in the topic."""
 		mtype = mtype.upper()
 		if self.device_id:
 			return f"{self.namespace}/{self.group_id}/{mtype}/{self.edge_node_id}/{self.device_id}"
@@ -160,38 +163,38 @@ class SpbTopic:
 
 	@property
 	def nbirth(self):
-		return self.construct("nbirth")
+		return self.construct("NBIRTH")
 	
 	@property
 	def ndeath(self):
-		return self.construct("ndeath")
+		return self.construct("NDEATH")
 	
 	@property
 	def dbirth(self):
-		return self.construct("dbirth")
+		return self.construct("DBIRTH")
 	
 	@property
 	def ddeath(self):
-		return self.construct("ddeath")
+		return self.construct("DDEATH")
 	
 	@property
 	def ndata(self):
-		return self.construct("ndata")
+		return self.construct("NDATA")
 	
 	@property
 	def ddata(self):
-		return self.construct("ddata")
+		return self.construct("DDATA")
 	
 	@property
 	def ncmd(self):
-		return self.construct("ncmd")
+		return self.construct("NCMD")
 	
 	@property
 	def dcmd(self):
-		return self.construct("dcmd")
+		return self.construct("DCMD")
 	
 	@property
 	def state(self):
-		return self.construct("state")
+		return self.construct("STATE")
 	
 	
