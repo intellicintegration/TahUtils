@@ -95,14 +95,12 @@ class SpbModel:
 	def getNodeBirthPayload(self, state: MetricValues, times: MetricTimes = dict()):
 		"""Returns a birth payload for the given state. State must be set for all metrics. Times can be set for specific metrics, if desired."""
 		state = convert_enum_keys(state)
-		times = convert_enum_keys(times)
+		times = process_times(convert_enum_keys(times))
 		
 		if not self.node_death_requested:
 			raise ValueError("Must request death before requesting new birth")
 		if set(COMMAND_METRICS | state.keys()) != set(self.all_metrics):
 			raise ValueError("Node birth metrics must be the same as the model's metrics")
-
-		times = process_times(times)
 
 		payload = spb.getNodeBirthPayload()
 
@@ -124,12 +122,10 @@ class SpbModel:
 	def getDataPayload(self, state: MetricValues, times: MetricTimes = dict()):
 		"""Returns a data payload for the given state. Times can be set for specific metrics, if desired."""
 		state = convert_enum_keys(state)
-		times = convert_enum_keys(times)
+		times = process_times(convert_enum_keys(times))
 		
 		if not set(state.keys()).issubset(set(self.all_metrics)):
 			raise ValueError("Node data metrics must be a subset of the model's metrics")
-		
-		times = process_times(times)
 
 		payload = spb.getDdataPayload()
 
