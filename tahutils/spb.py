@@ -100,7 +100,6 @@ class SpbModel:
 		if not self.node_death_requested:
 			raise ValueError("Must request death before requesting new birth")
 		if set(COMMAND_METRICS | state.keys()) != set(self.all_metrics):
-			print(state.keys(), self.all_metrics)
 			raise ValueError("Node birth metrics must be the same as the model's metrics")
 
 		times = process_times(times)
