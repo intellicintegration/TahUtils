@@ -12,10 +12,7 @@ See the `examples` directory in the project repository.
 - Generating birth, death, and data payloads for nodes (not tested for devices)
 - Managing aliases
 - Using enums for metric names
-
-## Goals
-
-- Parse message handling
+- Parsing sparkplug b messages
 
 ## Updating Tahu Version
 
