@@ -42,17 +42,17 @@ class SpbModel:
 		) -> None:
 		metrics = convert_enum_keys(metrics)
 		self.metrics = set(metrics.keys())
-		self.metric_types = {k:v for k,v in metrics.items()}
+		self.metric_types = {k:v for k,v in metrics.items()} | {m: spb.MetricDataType.Boolean for m in COMMAND_METRICS}
 
 		self.last_published = {}
 
 		self._use_aliases = use_aliases
 		self.all_metrics = COMMAND_METRICS | self.metrics
-		self.alias = {metric: i for i, metric in enumerate(self.all_metrics)} \
+		self._metric_to_alias = {metric: i for i, metric in enumerate(self.all_metrics)} \
 			if self._use_aliases else \
 			{metric: None for metric in self.all_metrics}
 		
-		self._alias_to_metric = {i: metric for i, metric in self.alias.items()} \
+		self._alias_to_metric = {i: metric for i, metric in self._metric_to_alias.items()} \
 			if self._use_aliases else None
 
 		self.auto_serialize = auto_serialize
@@ -77,7 +77,7 @@ class SpbModel:
 			metric = metric.value
 		if not self._use_aliases:
 			raise ValueError("Aliases are not being used")
-		return self.alias[metric]
+		return self._metric_to_alias[metric]
 	
 	def _serialize(self, p: spb.Payload) -> Union[bytes, spb.Payload]:
 		"""Serializes the payload if auto_serialize is True, otherwise is a no-op."""
@@ -92,12 +92,12 @@ class SpbModel:
 		self.node_death_requested = True
 		return self._serialize(spb.getNodeDeathPayload())
 
-	def getNodeBirthPayload(self, state: MetricValues, times: MetricTimes = dict()):
+	def getNodeBirthPayload(self, state: MetricValues, times: MetricTimes = dict(), ignore_missing_node_death: bool = False):
 		"""Returns a birth payload for the given state. State must be set for all metrics. Times can be set for specific metrics, if desired."""
 		state = convert_enum_keys(state)
 		times = process_times(convert_enum_keys(times))
 		
-		if not self.node_death_requested:
+		if not ignore_missing_node_death and not self.node_death_requested:
 			raise ValueError("Must request death before requesting new birth")
 		if set(COMMAND_METRICS | state.keys()) != set(self.all_metrics):
 			raise ValueError("Node birth metrics must be the same as the model's metrics")
@@ -105,7 +105,8 @@ class SpbModel:
 		payload = spb.getNodeBirthPayload()
 
 		for metric in COMMAND_METRICS:
-			spb.addMetric(payload, metric, self.alias[metric], spb.MetricDataType.Boolean, False)
+			if metric not in state:
+				state[metric] = False
 
 		for metric, value in state.items():
 			mt = self.metric_types[metric]
@@ -113,9 +114,9 @@ class SpbModel:
 			self.last_published[metric] = value
 
 			if metric in times:
-				spb.addMetric(payload, metric, self.alias[metric], mt, value, metric[times])
+				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, metric[times])
 			else:
-				spb.addMetric(payload, metric, self.alias[metric], mt, value)
+				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value)
 
 		return self._serialize(payload)
 	
@@ -135,9 +136,9 @@ class SpbModel:
 				self.last_published[metric] = value
 			
 				if metric in times:
-					spb.addMetric(payload, metric, self.alias[metric], mt, value, times[metric])
+					spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, times[metric])
 				else:
-					spb.addMetric(payload, metric, self.alias[metric], mt, value)
+					spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value)
 
 		return self._serialize(payload)
 
