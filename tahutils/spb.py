@@ -1,8 +1,11 @@
-from tahutils.tahu import sparkplug_b as spb
-from typing import Any, Union, Optional
-from datetime import datetime
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
+from functools import cached_property
+from typing import Optional, Union
+
+from tahutils.tahu import sparkplug_b as spb
+from tahutils.types import MetricName, MetricTimes, MetricValues
+from tahutils.utils import convert_enum_keys, flatten_data_dict, process_times
 
 COMMAND_METRICS = {
 	"Node Control/Next Server", 
@@ -10,52 +13,37 @@ COMMAND_METRICS = {
 	"Node Control/Reboot"
 }
 
-MetricName = Union[str, Enum]
-MetricValues = dict[MetricName, Any]
-Time = Union[int, datetime]
-MetricTimes = dict[MetricName, Time]
-
-def process_times(times: MetricTimes) -> dict[str, int]:
-	"""Processes the times dictionary to convert to milliseconds"""
-	r = {
-		metric: int(time.timestamp() * 1000) if isinstance(time, datetime) else time
-		for metric, time in times.items()
-	}
-	return r
-
-def convert_enum_keys(d: dict[MetricName, Time]) -> dict[str, Any]:
-	"""Converts the keys of the dictionary to strings if they are enums, otherwise leaves them as is. This is used to convert enum keys to strings for use in the SpbBodel."""
-	r = {
-		k if isinstance(k, str) else k.value: v
-		for k, v in d.items()
-	}
-	return r
-
 class SpbModel:
 	def __init__(
 			self, 
 			metrics: dict[MetricName, spb.MetricDataType], 
 			use_aliases: bool=False, 
 			auto_serialize: bool=True,
-			serialize_cast: Optional[callable] = bytearray
+			serialize_cast: Optional[callable] = bytearray,
+			flatten_states: bool=True,
+			flattened_dict_delimiter: str = "/"
 		) -> None:
-		metrics = convert_enum_keys(metrics)
-		self.metrics = set(metrics.keys())
-		self.metric_types = {k:v for k,v in metrics.items()}
+		self.flatten_states = flatten_states
+		self.flattened_dict_delimiter = flattened_dict_delimiter
 
-		self.last_published = {}
+		metrics = self._preprocess_dict(metrics)
+		self.metrics = set(metrics.keys())
+		self.metric_types = {k:v for k,v in metrics.items()} | {m: spb.MetricDataType.Boolean for m in COMMAND_METRICS}
+
+		self.current_values = {}
 
 		self._use_aliases = use_aliases
 		self.all_metrics = COMMAND_METRICS | self.metrics
-		self.alias = {metric: i for i, metric in enumerate(self.all_metrics)} \
+		self._metric_to_alias = {metric: i for i, metric in enumerate(self.all_metrics)} \
 			if self._use_aliases else \
 			{metric: None for metric in self.all_metrics}
 		
-		self._alias_to_metric = {i: metric for i, metric in self.alias.items()} \
+		self._alias_to_metric = {i: metric for i, metric in self._metric_to_alias.items()} \
 			if self._use_aliases else None
 
 		self.auto_serialize = auto_serialize
 		self.serialize_cast = serialize_cast
+
 
 		self.node_death_requested = False
 
@@ -63,6 +51,13 @@ class SpbModel:
 	def aliasing(self) -> bool:
 		"""Returns whether aliases are being used"""
 		return self._use_aliases
+
+	def _preprocess_dict(self, state: MetricValues, is_time: bool = False) -> MetricValues:
+		"""Preprocesses the state, flattening it if enabled, and converting enum keys. Can optionally preprocess times."""
+		r = flatten_data_dict(state, delimiter=self.flattened_dict_delimiter) if self.flatten_states else convert_enum_keys(state)
+		if is_time:
+			r = process_times(r)
+		return r
 
 	def aliasToMetric(self, alias: int) -> str:
 		"""Returns the metric for the given alias. Raises a ValueError if aliases are not being used."""
@@ -76,7 +71,7 @@ class SpbModel:
 			metric = metric.value
 		if not self._use_aliases:
 			raise ValueError("Aliases are not being used")
-		return self.alias[metric]
+		return self._metric_to_alias[metric]
 	
 	def _serialize(self, p: spb.Payload) -> Union[bytes, spb.Payload]:
 		"""Serializes the payload if auto_serialize is True, otherwise is a no-op."""
@@ -91,57 +86,53 @@ class SpbModel:
 		self.node_death_requested = True
 		return self._serialize(spb.getNodeDeathPayload())
 
-	def getNodeBirthPayload(self, state: MetricValues, times: MetricTimes = dict()):
+	def getNodeBirthPayload(self, state: MetricValues, times: MetricTimes = dict(), ignore_missing_node_death: bool = False):
 		"""Returns a birth payload for the given state. State must be set for all metrics. Times can be set for specific metrics, if desired."""
-		state = convert_enum_keys(state)
-		times = convert_enum_keys(times)
+		state = self._preprocess_dict(state)
+		times = self._preprocess_dict(times, is_time=True)
 		
-		if not self.node_death_requested:
+		if not ignore_missing_node_death and not self.node_death_requested:
 			raise ValueError("Must request death before requesting new birth")
 		if set(COMMAND_METRICS | state.keys()) != set(self.all_metrics):
-			print(state.keys(), self.all_metrics)
 			raise ValueError("Node birth metrics must be the same as the model's metrics")
-
-		times = process_times(times)
 
 		payload = spb.getNodeBirthPayload()
 
 		for metric in COMMAND_METRICS:
-			spb.addMetric(payload, metric, self.alias[metric], spb.MetricDataType.Boolean, False)
+			if metric not in state:
+				state[metric] = False
 
 		for metric, value in state.items():
 			mt = self.metric_types[metric]
 
-			self.last_published[metric] = value
+			self.current_values[metric] = value
 
 			if metric in times:
-				spb.addMetric(payload, metric, self.alias[metric], mt, value, metric[times])
+				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, metric[times])
 			else:
-				spb.addMetric(payload, metric, self.alias[metric], mt, value)
+				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value)
 
 		return self._serialize(payload)
 	
 	def getDataPayload(self, state: MetricValues, times: MetricTimes = dict()):
 		"""Returns a data payload for the given state. Times can be set for specific metrics, if desired."""
-		state = convert_enum_keys(state)
-		times = convert_enum_keys(times)
+		state = self._preprocess_dict(state)
+		times = self._preprocess_dict(times, is_time=True)
 		
 		if not set(state.keys()).issubset(set(self.all_metrics)):
 			raise ValueError("Node data metrics must be a subset of the model's metrics")
-		
-		times = process_times(times)
 
 		payload = spb.getDdataPayload()
 
 		for metric, value in state.items():
-			if value != self.last_published.get(metric, ...):
+			if value != self.current_values.get(metric, ...):
 				mt = self.metric_types[metric]
-				self.last_published[metric] = value
+				self.current_values[metric] = value
 			
 				if metric in times:
-					spb.addMetric(payload, metric, self.alias[metric], mt, value, times[metric])
+					spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, times[metric])
 				else:
-					spb.addMetric(payload, metric, self.alias[metric], mt, value)
+					spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value)
 
 		return self._serialize(payload)
 
@@ -154,47 +145,83 @@ class SpbTopic:
 
 	namespace: str = "spBv1.0"
 
+	@property
+	def template_string(self):
+		return f"{self.namespace}/{self.group_id}/%s/{self.edge_node_id}/{self.device_id}" \
+			if self.device_id else \
+			f"{self.namespace}/{self.group_id}/%s/{self.edge_node_id}"
+
 	def construct(self, mtype: str):
 		"""Constructs a Sparkplug B topic for the given message type. If a device_id is set, it will be included in the topic."""
 		mtype = mtype.upper()
-		if self.device_id:
-			return f"{self.namespace}/{self.group_id}/{mtype}/{self.edge_node_id}/{self.device_id}"
-		return f"{self.namespace}/{self.group_id}/{mtype}/{self.edge_node_id}"
+		return self.template_string % mtype
 
-	@property
+	@cached_property
 	def nbirth(self):
 		return self.construct("NBIRTH")
 	
-	@property
+	@cached_property
+	def NBIRTH(self):
+		return self.construct("NBIRTH")
+	
+	@cached_property
 	def ndeath(self):
 		return self.construct("NDEATH")
 	
-	@property
+	@cached_property
+	def NDEATH(self):
+		return self.construct("NDEATH")
+	
+	@cached_property
 	def dbirth(self):
 		return self.construct("DBIRTH")
 	
-	@property
+	@cached_property
+	def DBIRTH(self):
+		return self.construct("DBIRTH")
+	
+	@cached_property
 	def ddeath(self):
 		return self.construct("DDEATH")
 	
-	@property
+	@cached_property
+	def DDEATH(self):
+		return self.construct("DDEATH")
+	
+	@cached_property
 	def ndata(self):
 		return self.construct("NDATA")
 	
-	@property
+	@cached_property
+	def NDATA(self):
+		return self.construct("NDATA")
+	
+	@cached_property
 	def ddata(self):
 		return self.construct("DDATA")
 	
-	@property
+	@cached_property
 	def ncmd(self):
 		return self.construct("NCMD")
 	
-	@property
+	@cached_property
+	def NCMD(self):
+		return self.construct("NCMD")
+	
+	@cached_property
 	def dcmd(self):
 		return self.construct("DCMD")
 	
-	@property
+	@cached_property
+	def DCMD(self):
+		return self.construct("DCMD")
+	
+	@cached_property
 	def state(self):
+		return self.construct("STATE")
+	
+	@cached_property
+	def STATE(self):
 		return self.construct("STATE")
 	
 	
