@@ -1,6 +1,6 @@
 from tahutils.tahu import sparkplug_b as spb
 from tahutils.utils import flatten_data_dict, process_times, convert_enum_keys
-from typing import Optional
+from typing import Optional, Union
 from tahutils.types import MetricName, MetricValues, MetricTimes
 from enum import Enum
 from dataclasses import dataclass
@@ -20,10 +20,12 @@ class SpbModel:
 			auto_serialize: bool=True,
 			serialize_cast: Optional[callable] = bytearray,
 			flatten_states: bool=True,
+			flattened_dict_delimiter: str = "/"
 		) -> None:
 		self.flatten_states = flatten_states
+		self.flattened_dict_delimiter = flattened_dict_delimiter
 
-		metrics = self.preprocess_dict(metrics)
+		metrics = self._preprocess_dict(metrics)
 		self.metrics = set(metrics.keys())
 		self.metric_types = {k:v for k,v in metrics.items()} | {m: spb.MetricDataType.Boolean for m in COMMAND_METRICS}
 
@@ -49,9 +51,9 @@ class SpbModel:
 		"""Returns whether aliases are being used"""
 		return self._use_aliases
 
-	def preprocess_dict(self, state: MetricValues, is_time: bool = False) -> MetricValues:
-		"""Preprocesses the state to ensure that all metrics are present and that enums are converted to strings."""
-		r = flatten_data_dict(state) if self.flatten_states else convert_enum_keys(state)
+	def _preprocess_dict(self, state: MetricValues, is_time: bool = False) -> MetricValues:
+		"""Preprocesses the state, flattening it if enabled, and converting enum keys. Can optionally preprocess times."""
+		r = flatten_data_dict(state, delimiter=self.flattened_dict_delimiter) if self.flatten_states else convert_enum_keys(state)
 		if is_time:
 			r = process_times(r)
 		return r
@@ -85,8 +87,8 @@ class SpbModel:
 
 	def getNodeBirthPayload(self, state: MetricValues, times: MetricTimes = dict(), ignore_missing_node_death: bool = False):
 		"""Returns a birth payload for the given state. State must be set for all metrics. Times can be set for specific metrics, if desired."""
-		state = self.preprocess_dict(state)
-		times = self.preprocess_dict(times, is_time=True)
+		state = self._preprocess_dict(state)
+		times = self._preprocess_dict(times, is_time=True)
 		
 		if not ignore_missing_node_death and not self.node_death_requested:
 			raise ValueError("Must request death before requesting new birth")
@@ -113,8 +115,8 @@ class SpbModel:
 	
 	def getDataPayload(self, state: MetricValues, times: MetricTimes = dict()):
 		"""Returns a data payload for the given state. Times can be set for specific metrics, if desired."""
-		state = self.preprocess_dict(state)
-		times = self.preprocess_dict(times, is_time=True)
+		state = self._preprocess_dict(state)
+		times = self._preprocess_dict(times, is_time=True)
 		
 		if not set(state.keys()).issubset(set(self.all_metrics)):
 			raise ValueError("Node data metrics must be a subset of the model's metrics")
