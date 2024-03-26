@@ -1,10 +1,11 @@
-from tahutils.tahu import sparkplug_b as spb
-from tahutils.utils import flatten_data_dict, process_times, convert_enum_keys
-from typing import Optional, Union
-from tahutils.types import MetricName, MetricValues, MetricTimes
-from enum import Enum
 from dataclasses import dataclass
+from enum import Enum
 from functools import cached_property
+from typing import Optional, Union
+
+from tahutils.tahu import sparkplug_b as spb
+from tahutils.types import MetricName, MetricTimes, MetricValues
+from tahutils.utils import convert_enum_keys, flatten_data_dict, process_times
 
 COMMAND_METRICS = {
 	"Node Control/Next Server", 
@@ -29,7 +30,7 @@ class SpbModel:
 		self.metrics = set(metrics.keys())
 		self.metric_types = {k:v for k,v in metrics.items()} | {m: spb.MetricDataType.Boolean for m in COMMAND_METRICS}
 
-		self.last_published = {}
+		self.current_values = {}
 
 		self._use_aliases = use_aliases
 		self.all_metrics = COMMAND_METRICS | self.metrics
@@ -104,7 +105,7 @@ class SpbModel:
 		for metric, value in state.items():
 			mt = self.metric_types[metric]
 
-			self.last_published[metric] = value
+			self.current_values[metric] = value
 
 			if metric in times:
 				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, metric[times])
@@ -124,9 +125,9 @@ class SpbModel:
 		payload = spb.getDdataPayload()
 
 		for metric, value in state.items():
-			if value != self.last_published.get(metric, ...):
+			if value != self.current_values.get(metric, ...):
 				mt = self.metric_types[metric]
-				self.last_published[metric] = value
+				self.current_values[metric] = value
 			
 				if metric in times:
 					spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, times[metric])

@@ -3,7 +3,7 @@ from enum import Enum
 
 import paho.mqtt.client as mqtt
 
-from tahutils import SpbModel, SpbTopic, MetricDataType
+from tahutils import MetricDataType, SpbModel, SpbTopic
 
 """
 Enums can be used to define the metric names. This is useful for ensuring that the metric names are consistent across the application.
@@ -12,6 +12,11 @@ class Metric(Enum):
 	message = "message"
 	steps = "steps"
 	percent = "percent"
+	fib = "fib"
+
+class Fib(Enum):
+	f1 = "f1"
+	f2 = "f2"
 
 def main():
 	"""
@@ -29,6 +34,10 @@ def main():
 			Metric.message: MetricDataType.String,
 			Metric.steps: MetricDataType.Int32,
 			Metric.percent: MetricDataType.Float,
+			Metric.fib: {
+				Fib.f1: MetricDataType.Int32,
+				Fib.f2: MetricDataType.Int32,
+			}
 		},
 		serialize_cast=bytes
 	)
@@ -45,11 +54,17 @@ def main():
 		model.getNodeDeathPayload(),
 	)
 	
+	f1, f2 = 0, 1
+
 	mqttc.connect("localhost", 1883)
 	data = {
 		Metric.message: "Hello, world!",
 		Metric.steps: 0,
 		Metric.percent: 0,
+		Metric.fib: {
+			Fib.f1: f1,
+			Fib.f2: f2,
+		}
 	}
 	print(f"publish birth with data {data}")
 	birth = model.getNodeBirthPayload(data)
@@ -61,12 +76,19 @@ def main():
 	n_steps = 5
 	for i in range(1, n_steps+1):
 		time.sleep(2)
+		f1, f2 = f2, f1 + f2
+
+
 		"""
 		Data for NDATA/DDATA doesn't have to be a complete set of metrics.
 		"""
 		data = {
 			Metric.steps: i,
 			Metric.percent: i / n_steps,
+			Metric.fib: {
+				Fib.f1: f1,
+				Fib.f2: f2,
+			}
 		}
 		if i == n_steps:
 			data[Metric.message] = "Goodbye, world!"
@@ -77,6 +99,7 @@ def main():
 			topic.ndata, 
 			model.getDataPayload(data)
 		)
+		print(f"\tLast published state: {model.current_values}")
 	mqttc.disconnect()
 
 if __name__ == "__main__":
