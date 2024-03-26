@@ -144,7 +144,7 @@ class SpbTopic:
 
 	namespace: str = "spBv1.0"
 
-	@cached_property
+	@property
 	def template_string(self):
 		return f"{self.namespace}/{self.group_id}/%s/{self.edge_node_id}/{self.device_id}" \
 			if self.device_id else \
@@ -155,40 +155,72 @@ class SpbTopic:
 		mtype = mtype.upper()
 		return self.template_string % mtype
 
-	@cached_property
+	@property
 	def nbirth(self):
 		return self.construct("NBIRTH")
 	
-	@cached_property
+	@property
+	def NBIRTH(self):
+		return self.construct("NBIRTH")
+	
+	@property
 	def ndeath(self):
 		return self.construct("NDEATH")
 	
-	@cached_property
+	@property
+	def NDEATH(self):
+		return self.construct("NDEATH")
+	
+	@property
 	def dbirth(self):
 		return self.construct("DBIRTH")
 	
-	@cached_property
+	@property
+	def DBIRTH(self):
+		return self.construct("DBIRTH")
+	
+	@property
 	def ddeath(self):
 		return self.construct("DDEATH")
 	
-	@cached_property
+	@property
+	def DDEATH(self):
+		return self.construct("DDEATH")
+	
+	@property
 	def ndata(self):
 		return self.construct("NDATA")
 	
-	@cached_property
+	@property
+	def NDATA(self):
+		return self.construct("NDATA")
+	
+	@property
 	def ddata(self):
 		return self.construct("DDATA")
 	
-	@cached_property
+	@property
 	def ncmd(self):
 		return self.construct("NCMD")
 	
-	@cached_property
+	@property
+	def NCMD(self):
+		return self.construct("NCMD")
+	
+	@property
 	def dcmd(self):
 		return self.construct("DCMD")
 	
-	@cached_property
+	@property
+	def DCMD(self):
+		return self.construct("DCMD")
+	
+	@property
 	def state(self):
+		return self.construct("STATE")
+	
+	@property
+	def STATE(self):
 		return self.construct("STATE")
 	
 	
