@@ -155,71 +155,71 @@ class SpbTopic:
 		mtype = mtype.upper()
 		return self.template_string % mtype
 
-	@property
+	@cached_property
 	def nbirth(self):
 		return self.construct("NBIRTH")
 	
-	@property
+	@cached_property
 	def NBIRTH(self):
 		return self.construct("NBIRTH")
 	
-	@property
+	@cached_property
 	def ndeath(self):
 		return self.construct("NDEATH")
 	
-	@property
+	@cached_property
 	def NDEATH(self):
 		return self.construct("NDEATH")
 	
-	@property
+	@cached_property
 	def dbirth(self):
 		return self.construct("DBIRTH")
 	
-	@property
+	@cached_property
 	def DBIRTH(self):
 		return self.construct("DBIRTH")
 	
-	@property
+	@cached_property
 	def ddeath(self):
 		return self.construct("DDEATH")
 	
-	@property
+	@cached_property
 	def DDEATH(self):
 		return self.construct("DDEATH")
 	
-	@property
+	@cached_property
 	def ndata(self):
 		return self.construct("NDATA")
 	
-	@property
+	@cached_property
 	def NDATA(self):
 		return self.construct("NDATA")
 	
-	@property
+	@cached_property
 	def ddata(self):
 		return self.construct("DDATA")
 	
-	@property
+	@cached_property
 	def ncmd(self):
 		return self.construct("NCMD")
 	
-	@property
+	@cached_property
 	def NCMD(self):
 		return self.construct("NCMD")
 	
-	@property
+	@cached_property
 	def dcmd(self):
 		return self.construct("DCMD")
 	
-	@property
+	@cached_property
 	def DCMD(self):
 		return self.construct("DCMD")
 	
-	@property
+	@cached_property
 	def state(self):
 		return self.construct("STATE")
 	
-	@property
+	@cached_property
 	def STATE(self):
 		return self.construct("STATE")
 	
