@@ -1,6 +1,7 @@
 from tahutils.tahu import sparkplug_b as spb
-from typing import Any, Union, Optional
-from datetime import datetime
+from tahutils.utils import flatten_data_dict, process_times, convert_enum_keys
+from typing import Optional
+from tahutils.types import MetricName, MetricValues, MetricTimes
 from enum import Enum
 from dataclasses import dataclass
 from functools import cached_property
@@ -11,36 +12,18 @@ COMMAND_METRICS = {
 	"Node Control/Reboot"
 }
 
-MetricName = Union[str, Enum]
-MetricValues = dict[MetricName, Any]
-Time = Union[int, datetime]
-MetricTimes = dict[MetricName, Time]
-
-def process_times(times: MetricTimes) -> dict[str, int]:
-	"""Processes the times dictionary to convert to milliseconds"""
-	r = {
-		metric: int(time.timestamp() * 1000) if isinstance(time, datetime) else time
-		for metric, time in times.items()
-	}
-	return r
-
-def convert_enum_keys(d: dict[MetricName, Time]) -> dict[str, Any]:
-	"""Converts the keys of the dictionary to strings if they are enums, otherwise leaves them as is. This is used to convert enum keys to strings for use in the SpbBodel."""
-	r = {
-		k if isinstance(k, str) else k.value: v
-		for k, v in d.items()
-	}
-	return r
-
 class SpbModel:
 	def __init__(
 			self, 
 			metrics: dict[MetricName, spb.MetricDataType], 
 			use_aliases: bool=False, 
 			auto_serialize: bool=True,
-			serialize_cast: Optional[callable] = bytearray
+			serialize_cast: Optional[callable] = bytearray,
+			flatten_states: bool=True,
 		) -> None:
-		metrics = convert_enum_keys(metrics)
+		self.flatten_states = flatten_states
+
+		metrics = self.preprocess_dict(metrics)
 		self.metrics = set(metrics.keys())
 		self.metric_types = {k:v for k,v in metrics.items()} | {m: spb.MetricDataType.Boolean for m in COMMAND_METRICS}
 
@@ -58,12 +41,20 @@ class SpbModel:
 		self.auto_serialize = auto_serialize
 		self.serialize_cast = serialize_cast
 
+
 		self.node_death_requested = False
 
 	@property
 	def aliasing(self) -> bool:
 		"""Returns whether aliases are being used"""
 		return self._use_aliases
+
+	def preprocess_dict(self, state: MetricValues, is_time: bool = False) -> MetricValues:
+		"""Preprocesses the state to ensure that all metrics are present and that enums are converted to strings."""
+		r = flatten_data_dict(state) if self.flatten_states else convert_enum_keys(state)
+		if is_time:
+			r = process_times(r)
+		return r
 
 	def aliasToMetric(self, alias: int) -> str:
 		"""Returns the metric for the given alias. Raises a ValueError if aliases are not being used."""
@@ -94,8 +85,8 @@ class SpbModel:
 
 	def getNodeBirthPayload(self, state: MetricValues, times: MetricTimes = dict(), ignore_missing_node_death: bool = False):
 		"""Returns a birth payload for the given state. State must be set for all metrics. Times can be set for specific metrics, if desired."""
-		state = convert_enum_keys(state)
-		times = process_times(convert_enum_keys(times))
+		state = self.preprocess_dict(state)
+		times = self.preprocess_dict(times, is_time=True)
 		
 		if not ignore_missing_node_death and not self.node_death_requested:
 			raise ValueError("Must request death before requesting new birth")
@@ -122,8 +113,8 @@ class SpbModel:
 	
 	def getDataPayload(self, state: MetricValues, times: MetricTimes = dict()):
 		"""Returns a data payload for the given state. Times can be set for specific metrics, if desired."""
-		state = convert_enum_keys(state)
-		times = process_times(convert_enum_keys(times))
+		state = self.preprocess_dict(state)
+		times = self.preprocess_dict(times, is_time=True)
 		
 		if not set(state.keys()).issubset(set(self.all_metrics)):
 			raise ValueError("Node data metrics must be a subset of the model's metrics")
