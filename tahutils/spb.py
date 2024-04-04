@@ -156,6 +156,15 @@ class SpbTopic:
 		"""Constructs a Sparkplug B topic for the given message type. If a device_id is set, it will be included in the topic."""
 		mtype = mtype.upper()
 		return self.template_string % mtype
+	
+	def construct_device_topic(self, device_id: str):
+		"""Constructs an SpbTopic from this one with the given device_id."""
+		return SpbTopic(
+			group_id=self.group_id,
+			edge_node_id=self.edge_node_id,
+			device_id=device_id,
+			namespace=self.namespace
+		)
 
 	@cached_property
 	def nbirth(self):
