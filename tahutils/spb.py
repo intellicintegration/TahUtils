@@ -157,8 +157,8 @@ class SpbTopic:
 		mtype = mtype.upper()
 		return self.template_string % mtype
 	
-	def construct_device_topic(self, device_id: str):
-		"""Constructs an SpbTopic from this one with the given device_id."""
+	def construct_device_topic(self, device_id: Optional[str]):
+		"""Constructs and returns an SpbTopic from this one with the given device_id. Can pass `None` to remove the device_id."""
 		return SpbTopic(
 			group_id=self.group_id,
 			edge_node_id=self.edge_node_id,
