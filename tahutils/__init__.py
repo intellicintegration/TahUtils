@@ -1,7 +1,7 @@
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 from . import tahu
-from tahutils.spb import SpbModel, SpbTopic, COMMAND_METRICS
+from tahutils.spb import SpbModel, SpbTopic, COMMAND_METRICS_SET, CommandMetric
 from tahutils.tahu.sparkplug_b import MetricDataType 
 from . import utils
 from . import types
