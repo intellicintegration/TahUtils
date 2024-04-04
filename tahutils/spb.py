@@ -7,11 +7,12 @@ from tahutils.tahu import sparkplug_b as spb
 from tahutils.types import MetricName, MetricTimes, MetricValues
 from tahutils.utils import convert_enum_keys, flatten_data_dict, process_times
 
-COMMAND_METRICS = {
-	"Node Control/Next Server", 
-	"Node Control/Rebirth", 
-	"Node Control/Reboot"
-}
+class CommandMetric(Enum):
+	NextServer = "Node Control/Next Server"
+	Rebirth = "Node Control/Rebirth"
+	Reboot = "Node Control/Reboot"
+
+COMMAND_METRICS_SET = {m.value for m in CommandMetric}
 
 class SpbModel:
 	def __init__(
@@ -28,12 +29,12 @@ class SpbModel:
 
 		metrics = self._preprocess_dict(metrics)
 		self.metrics = set(metrics.keys())
-		self.metric_types = {k:v for k,v in metrics.items()} | {m: spb.MetricDataType.Boolean for m in COMMAND_METRICS}
+		self.metric_types = {k:v for k,v in metrics.items()} | {m: spb.MetricDataType.Boolean for m in COMMAND_METRICS_SET}
 
 		self.current_values = {}
 
 		self._use_aliases = use_aliases
-		self.all_metrics = COMMAND_METRICS | self.metrics
+		self.all_metrics = COMMAND_METRICS_SET | self.metrics
 		self._metric_to_alias = {metric: i for i, metric in enumerate(self.all_metrics)} \
 			if self._use_aliases else \
 			{metric: None for metric in self.all_metrics}
@@ -93,12 +94,12 @@ class SpbModel:
 		
 		if not ignore_missing_node_death and not self.node_death_requested:
 			raise ValueError("Must request death before requesting new birth")
-		if set(COMMAND_METRICS | state.keys()) != set(self.all_metrics):
+		if set(COMMAND_METRICS_SET | state.keys()) != set(self.all_metrics):
 			raise ValueError("Node birth metrics must be the same as the model's metrics")
 
 		payload = spb.getNodeBirthPayload()
 
-		for metric in COMMAND_METRICS:
+		for metric in COMMAND_METRICS_SET:
 			if metric not in state:
 				state[metric] = False
 
