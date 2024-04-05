@@ -120,6 +120,7 @@ class SpbModel:
 			else:
 				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value)
 
+		if rebirth:
 			for metric in set(self.current_values.keys()).difference(state.keys()):
 				value = self.current_values[metric]
 				mt = self.metric_types[metric]
