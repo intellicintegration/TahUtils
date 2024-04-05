@@ -94,14 +94,14 @@ class SpbModel:
 		self._last_death = self._serialize(spb.getNodeDeathPayload())
 		return self._last_death
 	
-	def getNodeBirthPayload(self, state: MetricValues, times: MetricTimes = dict(), ignore_missing_node_death: bool = False):
+	def getNodeBirthPayload(self, state: MetricValues, times: MetricTimes = dict(), rebirth: bool = False, ignore_missing_node_death: bool = False):
 		"""Returns a birth payload for the given state. State must be set for all metrics. Times can be set for specific metrics, if desired."""
 		state = self._preprocess_dict(state)
 		times = self._preprocess_dict(times, is_time=True)
 		
 		if not ignore_missing_node_death and not self.node_death_requested:
 			raise ValueError("Must request death before requesting new birth")
-		if set(COMMAND_METRICS_SET | state.keys()) != set(self.all_metrics):
+		if not rebirth and set(COMMAND_METRICS_SET | state.keys()) != set(self.all_metrics):
 			raise ValueError("Node birth metrics must be the same as the model's metrics")
 
 		payload = spb.getNodeBirthPayload()
@@ -118,6 +118,12 @@ class SpbModel:
 			if metric in times:
 				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, metric[times])
 			else:
+				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value)
+
+			for metric in set(self.current_values.keys()).difference(state.keys()):
+				value = self.current_values[metric]
+				mt = self.metric_types[metric]
+
 				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value)
 
 		return self._serialize(payload)
