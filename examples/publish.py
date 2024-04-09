@@ -102,5 +102,7 @@ def main():
 		print(f"\tLast published state: {model.current_values}")
 	mqttc.disconnect()
 
+	print(f"Last fib value: {model.get(Metric.fib, Fib.f2)}")
+
 if __name__ == "__main__":
 	main()

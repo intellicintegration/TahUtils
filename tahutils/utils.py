@@ -5,6 +5,10 @@ from typing import Any
 from tahutils.types import MetricName, MetricTimes, Time
 
 
+def make_key(*args: Enum, delimiter: str = "/") -> str:
+	l = [e.value if isinstance(e, Enum) else e for e in args]
+	return delimiter.join(l)
+
 def flatten_data_dict(data: dict[str, Any], convert_enum_keys: bool = True, delimiter: str ="/") -> dict[str, Any]:
 	"""Flattens nested data dictionaries by joining string keys in nested dicts with the delimiter
 	For example:
