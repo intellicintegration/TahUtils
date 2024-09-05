@@ -51,7 +51,7 @@ def main():
 	"""
 	mqttc.will_set(
 		topic.ndeath,
-		model.getNodeDeathPayload(),
+		model.getDeathPayload(),
 	)
 	
 	f1, f2 = 0, 1
@@ -67,7 +67,7 @@ def main():
 		}
 	}
 	print(f"publish birth with data {data}")
-	birth = model.getNodeBirthPayload(data)
+	birth = model.getBirthPayload(data)
 	mqttc.publish(
 		topic.nbirth, 
 		birth
@@ -100,6 +100,12 @@ def main():
 			model.getDataPayload(data)
 		)
 		print(f"\tLast published state: {model.current_values}")
+	
+	# Remember, graceful disonnects don't prompt the will message!
+	mqttc.publish(
+		topic.ndeath,
+		model.last_death
+	)
 	mqttc.disconnect()
 
 	print(f"Last fib value: {model.get(Metric.fib, Fib.f2)}")

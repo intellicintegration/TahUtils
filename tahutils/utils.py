@@ -1,8 +1,10 @@
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Annotated, get_origin, get_args
 
 from tahutils.types import MetricName, MetricTimes, Time
+
+from dataclasses import dataclass, is_dataclass, fields
 
 
 def make_key(*args: Enum, delimiter: str = "/") -> str:
@@ -47,3 +49,44 @@ def convert_enum_keys(d: dict[MetricName, Time]) -> dict[str, Any]:
 		for k, v in d.items()
 	}
 	return r
+
+def dataclass_to_dict(cls) -> dict[str, Any]:
+	if not is_dataclass(cls):
+		raise ValueError(f"{cls} is not a dataclass")
+	
+	result = {}
+	for field in fields(cls):
+		field_name, field_type = field.name, field.type
+		if get_origin(field_type) is Annotated:
+			field_type, *metadata = get_args(field_type)
+			field_name = metadata[0]
+		if is_dataclass(field_type):
+			result[field_name] = dataclass_to_dict(field_type)
+		else:
+			result[field_name] = field_type
+
+	return result
+
+def instance_to_dict(instance) -> dict[str, Any]:
+	if not is_dataclass(instance):
+		raise ValueError(f"{instance} is not a dataclass instance")
+	
+	result = {}
+	for field in fields(instance):
+		field_name, field_value = field.name, getattr(instance, field.name)
+		field_type = field.type
+		
+		# Handle Annotated types
+		if get_origin(field_type) is Annotated:
+			field_type, *metadata = get_args(field_type)
+			field_name = metadata[0]  # Assuming the first metadata argument is the desired field name
+		
+		# Recursively convert nested dataclasses
+		if field_value is ...:
+			pass
+		elif is_dataclass(field_value):
+			result[field_name] = instance_to_dict(field_value)
+		else:
+			result[field_name] = field_value
+
+	return result

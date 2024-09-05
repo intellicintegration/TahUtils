@@ -5,7 +5,11 @@ from typing import Any, Optional, Union
 
 from tahutils.tahu import sparkplug_b as spb
 from tahutils.types import MetricName, MetricTimes, MetricValues
-from tahutils.utils import convert_enum_keys, flatten_data_dict, process_times, make_key
+from tahutils.utils import convert_enum_keys, \
+	flatten_data_dict, process_times, make_key, \
+	dataclass_to_dict, instance_to_dict
+
+from dataclasses import is_dataclass
 
 class CommandMetric(Enum):
 	NextServer = "Node Control/Next Server"
@@ -22,19 +26,31 @@ class SpbModel:
 			auto_serialize: bool=True,
 			serialize_cast: Optional[callable] = bytearray,
 			flatten_states: bool=True,
-			flattened_dict_delimiter: str = "/"
+			flattened_dict_delimiter: str = "/",
+			is_device = False,
 		) -> None:
+
+		self.is_device = is_device
+
+		if is_dataclass(metrics):
+			metrics = dataclass_to_dict(metrics)
+
 		self.flatten_states = flatten_states
 		self.flattened_dict_delimiter = flattened_dict_delimiter
 
 		metrics = self._preprocess_dict(metrics)
 		self.metrics = set(metrics.keys())
-		self.metric_types = {k:v for k,v in metrics.items()} | {m: spb.MetricDataType.Boolean for m in COMMAND_METRICS_SET}
+		self.metric_types = {k:v for k,v in metrics.items()}
+		if not self.is_device:
+			self.metric_types |= {m: spb.MetricDataType.Boolean for m in COMMAND_METRICS_SET}
 
 		self.current_values = {}
 
 		self._use_aliases = use_aliases
-		self.all_metrics = COMMAND_METRICS_SET | self.metrics
+		if self.is_device:
+			self.all_metrics = self.metrics
+		else:
+			self.all_metrics = COMMAND_METRICS_SET | self.metrics
 		self._metric_to_alias = {metric: i for i, metric in enumerate(self.all_metrics)} \
 			if self._use_aliases else \
 			{metric: None for metric in self.all_metrics}
@@ -45,7 +61,7 @@ class SpbModel:
 		self.auto_serialize = auto_serialize
 		self.serialize_cast = serialize_cast
 
-		self.node_death_requested = False
+		self.node_death_requested = self.is_device
 
 		self._last_death = None
 
@@ -65,6 +81,8 @@ class SpbModel:
 
 	def _preprocess_dict(self, state: MetricValues, is_time: bool = False) -> MetricValues:
 		"""Preprocesses the state, flattening it if enabled, and converting enum keys. Can optionally preprocess times."""
+		if is_dataclass(state):
+			state = instance_to_dict(state)
 		r = flatten_data_dict(state, delimiter=self.flattened_dict_delimiter) if self.flatten_states else convert_enum_keys(state)
 		if is_time:
 			r = process_times(r)
@@ -92,27 +110,35 @@ class SpbModel:
 			return p.SerializeToString()
 		return p
 	
-	def getNodeDeathPayload(self):
+	def getDeathPayload(self):
 		"""Returns a death payload for the node. This must be requested and sent as part of the connection."""
 		self.node_death_requested = True
-		self._last_death = self._serialize(spb.getNodeDeathPayload())
+		if self.is_device:
+			self.last_death = self._serialize(spb.getDdataPayload())
+		else:
+			self._last_death = self._serialize(spb.getNodeDeathPayload())
 		return self._last_death
 	
-	def getNodeBirthPayload(self, state: MetricValues, times: MetricTimes = dict(), rebirth: bool = False, ignore_missing_node_death: bool = False):
+	def getBirthPayload(self, state: MetricValues, times: MetricTimes = dict(), rebirth: bool = False, ignore_missing_node_death: bool = False):
 		"""Returns a birth payload for the given state. State must be set for all metrics. Times can be set for specific metrics, if desired."""
 		state = self._preprocess_dict(state)
 		times = self._preprocess_dict(times, is_time=True)
 		
 		if not ignore_missing_node_death and not self.node_death_requested:
 			raise ValueError("Must request death before requesting new birth")
-		if not rebirth and set(COMMAND_METRICS_SET | state.keys()) != set(self.all_metrics):
+		expected_keys = set(state.keys()) if self.is_device else set(COMMAND_METRICS_SET | state.keys())
+		if not rebirth and set(expected_keys) != set(self.all_metrics):
 			raise ValueError("Node birth metrics must be the same as the model's metrics")
 
-		payload = spb.getNodeBirthPayload()
+		if self.is_device:
+			payload = spb.getDeviceBirthPayload()
+		else:
+			payload = spb.getNodeBirthPayload()
 
-		for metric in COMMAND_METRICS_SET:
-			if metric not in state:
-				state[metric] = False
+		if not self.is_device:
+			for metric in COMMAND_METRICS_SET:
+				if metric not in state:
+					state[metric] = False
 
 		for metric, value in state.items():
 			mt = self.metric_types[metric]
@@ -170,7 +196,7 @@ class SpbTopic:
 			if self.device_id else \
 			f"{self.namespace}/{self.group_id}/%s/{self.edge_node_id}"
 
-	def construct(self, mtype: str):
+	def construct(self, mtype: str) -> str:
 		"""Constructs a Sparkplug B topic for the given message type. If a device_id is set, it will be included in the topic."""
 		mtype = mtype.upper()
 		return self.template_string % mtype
