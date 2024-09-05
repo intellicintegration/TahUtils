@@ -47,8 +47,6 @@ def main():
 		node_model.getDeathPayload(),
 	)
 	
-	f1, f2 = 0, 1
-	
 	mqttc.connect("localhost", 1883)
 	
 	# Creating the dataclass instance for the birth payload
