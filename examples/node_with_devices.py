@@ -73,6 +73,7 @@ def main():
 	
 	n_steps = 5
 	for i in range(1, n_steps+1):
+		print(f"Publishing data message {i}")
 		time.sleep(2)
 
 		for i in range(n_devices):
@@ -82,11 +83,8 @@ def main():
 				device_models[i].getDataPayload(device_datas[i])
 			)
 	
-	for i in range(n_devices):
-		mqttc.publish(
-			device_topics[i].ddeath,
-			device_models[i].last_death
-		)
+	print("Publishing death messages...")
+	# The node death kills all devices
 	mqttc.publish(
 		node_topic.ndeath,
 		node_model.last_death

@@ -114,7 +114,7 @@ class SpbModel:
 		"""Returns a death payload for the node. This must be requested and sent as part of the connection."""
 		self.node_death_requested = True
 		if self.is_device:
-			self.last_death = self._serialize(spb.getDdataPayload())
+			self._last_death = self._serialize(spb.getDdataPayload())
 		else:
 			self._last_death = self._serialize(spb.getNodeDeathPayload())
 		return self._last_death
