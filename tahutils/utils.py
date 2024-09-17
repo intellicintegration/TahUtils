@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Any, Annotated, get_origin, get_args
 
 from tahutils.types import MetricName, MetricTimes, Time
+import tahutils.datatypes as datatypes 
 
 from dataclasses import dataclass, is_dataclass, fields
 
@@ -63,6 +64,8 @@ def dataclass_to_dict(cls) -> dict[str, Any]:
 		if is_dataclass(field_type):
 			result[field_name] = dataclass_to_dict(field_type)
 		else:
+			if isinstance(field_type, type):
+				field_type = field_type.__name__
 			result[field_name] = field_type
 
 	return result

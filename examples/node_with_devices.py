@@ -2,7 +2,7 @@ import time
 from enum import Enum
 from typing import Annotated
 import paho.mqtt.client as mqtt
-from tahutils import MetricDataType, SpbModel, SpbTopic
+from tahutils import MetricDataType, DictSpbNode, SpbTopic
 from tahutils import utils
 from dataclasses import dataclass
 
@@ -24,12 +24,12 @@ def main():
 
 	n_devices = 2
 
-	node_model = SpbModel(
+	node_model = DictSpbNode(
 		NodeData,
 		serialize_cast=bytes
 	)
 	device_models = [
-		SpbModel(
+		DictSpbNode(
 			DeviceData,
 			serialize_cast=bytes,
 			is_device=True

@@ -3,7 +3,7 @@ from enum import Enum
 
 import paho.mqtt.client as mqtt
 
-from tahutils import MetricDataType, SpbModel, SpbTopic
+from tahutils import MetricDataType, DictSpbNode, SpbTopic
 
 """
 Enums can be used to define the metric names. This is useful for ensuring that the metric names are consistent across the application.
@@ -29,7 +29,9 @@ def main():
 	When constructing the SpbModel, every metric must be defined with its corresponding MetricDataType.
 	Additionally, we set the serialize_cast to the datatype expected by the MQTT client's publish method.
 	"""
-	model = SpbModel(
+	
+	topic = SpbTopic("testgroup", "testnode")
+	model = DictSpbNode(
 		{
 			Metric.message: MetricDataType.String,
 			Metric.steps: MetricDataType.Int32,
@@ -39,9 +41,9 @@ def main():
 				Fib.f2: MetricDataType.Int32,
 			}
 		},
-		serialize_cast=bytes
+		serialize_cast=bytes,
+		topic=topic,
 	)
-	topic = SpbTopic("testgroup", "testnode")
 
 	mqttc = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, "TahutilsPublishExample")
 

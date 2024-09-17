@@ -1,4 +1,6 @@
 from dataclasses import dataclass, is_dataclass, fields
+from tahutils import datatypes
+from tahutils.node import SpbTopic
 
 _UNSET = object()
 
@@ -19,14 +21,39 @@ def fill_with_unset(cls):
 		else:
 			field_values[field.name] = _UNSET
 	
-	# Create a new instance of the dataclass with ellipsis in all fields
+	# Create a new instance of the dataclass with _UNSET in all fields
 	return cls(**field_values)
 
-class ObjectDrivenSPBModel:
-	def __init__(self, model_class):
+class DataclassSpbNode:
+	def __init__(
+			self, 
+			model_class, 
+			topic: SpbTopic = None,
+			use_aliases: bool=False,
+			auto_serialize: bool=True,
+			serialize_cast: callable = bytearray,
+			is_device = False,
+			):
 		if not is_dataclass(model_class):
 			raise ValueError("model_class must be a dataclass")
 		self._model = fill_with_unset(model_class)
+		self.last_published = None
+
+		self.topic = topic
+
+		self.child_devices = set()
+
+		self._use_aliases = use_aliases
+
+	@property
+	def is_device(self):
+		if self.topic is None:
+			raise ValueError("No topic set for this model")
+		return self.topic.is_device
+
+	@property
+	def model(self):
+		return self._model
 
 	@property
 	def model(self):

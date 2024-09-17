@@ -2,20 +2,20 @@ import time
 from enum import Enum
 from typing import Annotated
 import paho.mqtt.client as mqtt
-from tahutils import MetricDataType, SpbModel, SpbTopic
+from tahutils import datatypes, DictSpbNode, SpbTopic
 from tahutils import utils
 from dataclasses import dataclass
 
 @dataclass
 class Fib:
-	f1: MetricDataType.Int32
-	f2: MetricDataType.Int32
+	f1: datatypes.Int32
+	f2: datatypes.Int32
 
 @dataclass
 class Metric:
-	message: Annotated[MetricDataType.String, "Message"]
-	steps: MetricDataType.Int32
-	percent: MetricDataType.Float
+	message: Annotated[datatypes.String, "Message"]
+	steps: datatypes.Int32
+	percent: datatypes.Float
 	fib: Fib
 
 def main():
@@ -24,7 +24,7 @@ def main():
 	Assumes a local MQTT broker is running on the default port with no authentication.
 	"""
 	
-	model = SpbModel(
+	model = DictSpbNode(
 		Metric,
 		serialize_cast=bytes
 	)
