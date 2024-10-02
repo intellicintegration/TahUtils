@@ -146,7 +146,9 @@ class SpbModel:
 			self.current_values[metric] = value
 
 			if metric in times:
-				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, metric[times])
+				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, times[metric])
+			elif timestamp_override is not None:
+				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, timestamp_override)
 			else:
 				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value)
 
@@ -159,7 +161,12 @@ class SpbModel:
 
 		return self._serialize(payload)
 	
-	def getDataPayload(self, state: MetricValues, times: MetricTimes = dict()):
+	def getDataPayload(
+			self, 
+			state: MetricValues, 
+			times: MetricTimes = dict(), 
+			timestamp_override: Optional[int] = None
+		):
 		"""Returns a data payload for the given state. Times can be set for specific metrics, if desired."""
 		state = self._preprocess_dict(state)
 		times = self._preprocess_dict(times, is_time=True)
@@ -176,6 +183,8 @@ class SpbModel:
 			
 				if metric in times:
 					spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, times[metric])
+				elif timestamp_override is not None:
+					spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, timestamp_override)
 				else:
 					spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value)
 
