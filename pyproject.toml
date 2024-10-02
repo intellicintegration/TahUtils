@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tahutils"
-version = "0.1.10"
+version = "0.1.11"
 description = "Python utilities for Tahu & Sparkplug B."
 authors = ["Justin Dula <justin.dula@intellicintegration.com>"]
 readme = "README.md"
