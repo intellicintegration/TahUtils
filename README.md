@@ -14,7 +14,9 @@ See the `examples` directory in the project repository.
 - Using enums for metric names
 - Parsing sparkplug b messages
 
-## Updating Tahu Version
+## Changes to the `tahu` library
+
+### Updating compiled Protobuf files
 
 Assuming no major refactoring to the tahu library, updating the included tahu consists of the following steps:
 
@@ -38,9 +40,10 @@ Assuming no major refactoring to the tahu library, updating the included tahu co
 	from tahutils.tahu.sparkplug_b_pb2 import Payload
 	from tahutils.tahu.array_packer import *
 	```
-## Fixing Tahu metric timestamps
 
-As of this version, there is a bug in the `tahu` library relating to metric times. See [this pull request](https://github.com/eclipse/tahu/pull/398) for more details.
+### Fixing metric timestamps
+
+As of this version, there is a bug in the `tahu` library relating to metric timestamps. See [this pull request](https://github.com/eclipse/tahu/pull/398) for more details.
 
 This is patched by updating `sparkplug_b.py`.
 
