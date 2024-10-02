@@ -38,3 +38,27 @@ Assuming no major refactoring to the tahu library, updating the included tahu co
 	from tahutils.tahu.sparkplug_b_pb2 import Payload
 	from tahutils.tahu.array_packer import *
 	```
+## Fixing Tahu metric timestamps
+
+As of this version, there is a bug in the `tahu` library relating to metric times. See [this pull request](https://github.com/eclipse/tahu/pull/398) for more details.
+
+This is patched by updating `sparkplug_b.py`.
+
+```python
+def addMetric(container, name, alias, type, value, timestamp=None):
+    if timestamp is None:
+        timestamp = int(round(time.time() * 1000))
+	...
+
+def addNullMetric(container, name, alias, type, timestamp=None):
+    if timestamp is None:
+        timestamp = int(round(time.time() * 1000))
+    metric = container.metrics.add()
+    if name is not None:
+        metric.name = name
+    if alias is not None:
+        metric.alias = alias
+    metric.timestamp = timestamp
+    metric.is_null = True
+	...
+```
