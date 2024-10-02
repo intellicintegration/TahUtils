@@ -120,7 +120,7 @@ class SpbModel:
 			self.current_values[metric] = value
 
 			if metric in times:
-				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, metric[times])
+				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, times[metric])
 			else:
 				spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value)
 
