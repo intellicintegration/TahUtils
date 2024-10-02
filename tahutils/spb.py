@@ -119,7 +119,14 @@ class SpbModel:
 			self._last_death = self._serialize(spb.getNodeDeathPayload())
 		return self._last_death
 	
-	def getBirthPayload(self, state: MetricValues, times: MetricTimes = dict(), rebirth: bool = False, ignore_missing_node_death: bool = False):
+	def getBirthPayload(
+			self, 
+			state: MetricValues, 
+			times: MetricTimes = dict(), 
+			rebirth: bool = False, 
+			ignore_missing_node_death: bool = False,
+			timestamp_override: Optional[int] = None
+		):
 		"""Returns a birth payload for the given state. State must be set for all metrics. Times can be set for specific metrics, if desired."""
 		state = self._preprocess_dict(state)
 		times = self._preprocess_dict(times, is_time=True)
@@ -182,11 +189,31 @@ class SpbModel:
 				self.current_values[metric] = value
 			
 				if metric in times:
-					spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, times[metric])
+					spb.addMetric(
+						payload, 
+						metric, 
+						self._metric_to_alias[metric], 
+						mt, 
+						value, 
+						times[metric]
+					)
 				elif timestamp_override is not None:
-					spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value, timestamp_override)
+					spb.addMetric(
+						payload, 
+						metric, 
+						self._metric_to_alias[metric], 
+						mt, 
+						value, 
+						timestamp_override
+					)
 				else:
-					spb.addMetric(payload, metric, self._metric_to_alias[metric], mt, value)
+					spb.addMetric(
+						payload, 
+						metric, 
+						self._metric_to_alias[metric], 
+						mt, 
+						value
+					)
 
 		return self._serialize(payload)
 
