@@ -9,9 +9,10 @@ See the `examples` directory in the project repository.
 ## Current Support
 
 - Generating Sparkplug B topics
-- Generating birth, death, and data payloads for nodes (not tested for devices)
+- Generating birth, death, and data payloads for nodes and devices
 - Managing aliases
 - Using enums for metric names
+- Using dataclasses to manage metric names and metric states
 - Parsing sparkplug b messages
 
 ## Changes to the `tahu` library
